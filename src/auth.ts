@@ -363,9 +363,22 @@ function finalizeAppSetup() {
 
             if ((window as any).Capacitor?.isNativePlatform?.()) {
                 const ln = require('@capacitor/local-notifications').LocalNotifications;
+                const pn = require('@capacitor/push-notifications').PushNotifications;
+                const cam = require('@capacitor/camera').Camera;
+                const geo = require('@capacitor/geolocation').Geolocation;
+
                 ln.checkPermissions().then((p: any) => {
                     if (p.display !== 'granted') ln.requestPermissions();
                 });
+                try {
+                    pn.requestPermissions().then((p: any) => {
+                        if (p.receive === 'granted') {
+                            pn.register();
+                        }
+                    });
+                } catch(e) {}
+                try { cam.requestPermissions(); } catch(e) {}
+                try { geo.requestPermissions(); } catch(e) {}
             } else if ("Notification" in window) {
                 if (Notification.permission !== "granted" && Notification.permission !== "denied") {
                     Notification.requestPermission();
