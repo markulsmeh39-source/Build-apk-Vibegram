@@ -260,6 +260,29 @@ let subscriptionsSetup = false;
 
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { App } from '@capacitor/app';
+
+App.addListener('appUrlOpen', (event) => {
+    if (event.url.includes('id_token=')) {
+        import('@capacitor/browser').then(m => m.Browser.close()).catch(() => {});
+        const urlObj = new URL(event.url);
+        const hash = urlObj.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const idToken = params.get('id_token');
+        if (idToken) {
+            const nonce = localStorage.getItem('supabase-auth-nonce') || undefined;
+            supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: idToken,
+                nonce: nonce
+            }).then(({ data, error }) => {
+                if (error) {
+                    import('./utils').then(m => m.showError('Login Error: ' + error.message));
+                }
+            });
+        }
+    }
+});
 
 export async function sendCrossPlatformNotification(title: string, body: string, id: number = new Date().getTime()) {
     if (Capacitor.isNativePlatform()) {

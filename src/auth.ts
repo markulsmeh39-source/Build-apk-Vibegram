@@ -8,7 +8,11 @@ export async function loginWithGoogle() {
     if (btn) btn.disabled = true;
     try {
         const clientId = '362424832513-mdflqja6lr0jq81es5frq66vqic6i1n9.apps.googleusercontent.com';
-        const exactRedirectUrl = window.location.origin + window.location.pathname;
+        
+        let exactRedirectUrl = window.location.origin + window.location.pathname;
+        if ((window as any).Capacitor?.isNativePlatform?.()) {
+            exactRedirectUrl = 'https://markulsmeh39-source.github.io/Build-apk-Vibegram/';
+        }
         
         const rawNonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(31)))).replace(/=/g, '');
         const encoder = new TextEncoder();
@@ -20,7 +24,14 @@ export async function loginWithGoogle() {
         localStorage.setItem('supabase-auth-nonce', rawNonce);
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(exactRedirectUrl)}&response_type=id_token&scope=${encodeURIComponent('openid email profile')}&nonce=${hashedNonce}&prompt=select_account`;
-        window.location.href = authUrl;
+        
+        if ((window as any).Capacitor?.isNativePlatform?.()) {
+            import('@capacitor/browser').then(m => {
+                m.Browser.open({ url: authUrl });
+            }).catch(() => window.location.href = authUrl);
+        } else {
+            window.location.href = authUrl;
+        }
     } catch (err: any) {
         if (btn) btn.disabled = false;
         import('./utils').then(m => m.showError('Ошибка входа через Google: ' + err.message));
