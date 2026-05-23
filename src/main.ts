@@ -521,6 +521,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Request Capacitor permissions after app load
+    if (window.hasOwnProperty('Capacitor') && (window as any).Capacitor.isNativePlatform()) {
+        setTimeout(async () => {
+            try {
+                const { Camera } = await import('@capacitor/camera');
+                const { Geolocation } = await import('@capacitor/geolocation');
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                const { LocalNotifications } = await import('@capacitor/local-notifications');
+                await Camera.requestPermissions().catch(console.warn);
+                await Geolocation.requestPermissions().catch(console.warn);
+                await PushNotifications.requestPermissions().catch(console.warn);
+                await LocalNotifications.requestPermissions().catch(console.warn);
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
+            } catch (err) {
+                console.warn('Failed to request Capacitor permissions on startup:', err);
+            }
+        }, 1500); // Small delay to let app UI load before prompting
+    }
     window.addEventListener('beforeunload', () => {
         if ((window as any).logic?.pauseAllMedia) {
             (window as any).logic.pauseAllMedia(undefined, true);

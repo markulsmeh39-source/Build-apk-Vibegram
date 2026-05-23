@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
     appendUserAgent: ' VibegramApp/1.0'
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
