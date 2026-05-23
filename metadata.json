@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Vibegram Pro MAX",
+  "description": "",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
