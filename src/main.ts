@@ -258,6 +258,33 @@ supabase.auth.onAuthStateChange((event, session) => {
 // Setup Realtime subscriptions
 let subscriptionsSetup = false;
 
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+
+export async function sendCrossPlatformNotification(title: string, body: string, id: number = new Date().getTime()) {
+    if (Capacitor.isNativePlatform()) {
+        try {
+            await LocalNotifications.schedule({
+                notifications: [
+                    {
+                        title: title,
+                        body: body,
+                        id: Math.floor(id % 2147483647),
+                        schedule: { at: new Date(Date.now() + 100) },
+                        sound: null,
+                        actionTypeId: "",
+                        extra: null
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error("Local notification error", e);
+        }
+    } else if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body: body });
+    }
+}
+
 function setupRealtime() {
     if (subscriptionsSetup || !state.currentUser) return;
     subscriptionsSetup = true;
@@ -288,11 +315,11 @@ function setupRealtime() {
                             if ((window as any).logic?.playNotificationSound) (window as any).logic.playNotificationSound();
                         }
                         
-                        if (document.hidden && "Notification" in window && Notification.permission === "granted" && !isCommentChat) {
+                        if (document.hidden && !isCommentChat) {
                             const { data: sender } = await supabase.from('profiles').select('display_name, username').eq('id', payload.new.sender_id).single();
                             const senderName = sender?.display_name || sender?.username || 'Пользователь';
                             const text = payload.new.content || (payload.new.message_type === 'voice' ? '🎤 Голосовое сообщение' : 'Медиа сообщение');
-                            new Notification(`Новое сообщение от ${senderName}`, { body: text });
+                            sendCrossPlatformNotification(`Новое сообщение от ${senderName}`, text, new Date().getTime());
                         }
                     }
                 } else {
@@ -310,8 +337,8 @@ function setupRealtime() {
                             
                             if ((window as any).logic?.playNotificationSound) (window as any).logic.playNotificationSound();
                             
-                            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-                                new Notification(`Новое сообщение от ${senderName}`, { body: text });
+                            if (document.hidden) {
+                                sendCrossPlatformNotification(`Новое сообщение от ${senderName}`, text, new Date().getTime());
                             }
                             
                             if (state.activeChatId !== payload.new.chat_id) {

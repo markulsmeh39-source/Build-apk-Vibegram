@@ -350,7 +350,12 @@ function finalizeAppSetup() {
             });
             window.addEventListener('beforeunload', () => setOnlineStatus(false));
 
-            if ("Notification" in window) {
+            if ((window as any).Capacitor?.isNativePlatform?.()) {
+                const ln = require('@capacitor/local-notifications').LocalNotifications;
+                ln.checkPermissions().then((p: any) => {
+                    if (p.display !== 'granted') ln.requestPermissions();
+                });
+            } else if ("Notification" in window) {
                 if (Notification.permission !== "granted" && Notification.permission !== "denied") {
                     Notification.requestPermission();
                 }
