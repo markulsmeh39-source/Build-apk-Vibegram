@@ -189,25 +189,32 @@ let isHandlingIdToken = false;
 if (idToken) {
     isHandlingIdToken = true;
     const nonce = localStorage.getItem('supabase-auth-nonce') || undefined;
-    window.history.replaceState({}, document.title, window.location.pathname);
-    supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: idToken,
-        nonce: nonce
-    }).then(({ data, error }) => {
-        isHandlingIdToken = false;
-        if (error) {
-            import('./utils').then(m => m.showError('Login Error: ' + error.message));
-            
-            // On error we need to show the auth screen manually since we skipped it
-            document.getElementById('auth-screen')!.classList.remove('hidden');
-            const loader = document.getElementById('initial-loader');
-            if (loader) {
-                loader.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => loader.remove(), 300);
+    
+    if (!nonce && !(window as any).Capacitor?.isNativePlatform?.()) {
+        const hashStr = window.location.hash || ('#' + window.location.search.substring(1));
+        window.location.href = 'com.vibegram.app://auth' + hashStr;
+        document.body.innerHTML = '<div style="padding: 20px; text-align: center; margin-top: 50px; font-family: sans-serif; height: 100vh; background: #fff;">Открываем приложение...<br><br>Если оно не открылось автоматически, <a href="com.vibegram.app://auth' + hashStr + '" style="color: blue; text-decoration: underline;">нажмите здесь</a></div>';
+    } else {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+            nonce: nonce
+        }).then(({ data, error }) => {
+            isHandlingIdToken = false;
+            if (error) {
+                import('./utils').then(m => m.showError('Login Error: ' + error.message));
+                
+                // On error we need to show the auth screen manually since we skipped it
+                document.getElementById('auth-screen')!.classList.remove('hidden');
+                const loader = document.getElementById('initial-loader');
+                if (loader) {
+                    loader.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => loader.remove(), 300);
+                }
             }
-        }
-    });
+        });
+    }
 } else if (hashError) {
     let errorMsg = decodeURIComponent(hashError.replace(/\+/g, ' '));
     if (errorMsg.includes('OAuth state not found') || errorMsg.includes('expired')) {
