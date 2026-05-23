@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "538239096770",
+    "project_id": "straight-dream-4sjh2",
+    "storage_bucket": "straight-dream-4sjh2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:538239096770:android:7122022d85caffe575a85b",
+        "android_client_info": {
+          "package_name": "com.vibegram.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbrgGOvNKVAD_4ef4Q4148PTU2rOvKTi8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

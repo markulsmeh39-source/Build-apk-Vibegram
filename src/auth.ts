@@ -2,6 +2,7 @@ import { supabase, state } from './supabase';
 import { getFakeEmail, showError, customConfirm } from './utils';
 import { loadChats } from './chat';
 import { initWebRTC } from './webrtc';
+import { requestFirebaseWebPushPermission, listenForFirebaseMessages } from './firebase-setup';
 
 export async function loginWithGoogle() {
     const btn = event?.currentTarget as HTMLButtonElement | undefined;
@@ -371,18 +372,58 @@ function finalizeAppSetup() {
                     if (p.display !== 'granted') ln.requestPermissions();
                 });
                 try {
-                    pn.requestPermissions().then((p: any) => {
-                        if (p.receive === 'granted') {
+                    pn.requestPermissions().then((result: any) => {
+                        if (result.receive === 'granted') {
                             pn.register();
                         }
                     });
-                } catch(e) {}
+
+                    pn.addListener('registration', async (token: { value: string }) => {
+                        console.log('Push registration success, token: ' + token.value);
+                        // Save the FCM token to Supabase profiles
+                        const { data: profileData } = await supabase.from('profiles').select('settings').eq('id', state.currentUser.id).single();
+                        const currentSettings = profileData?.settings || {};
+                        if (currentSettings.fcm_token !== token.value) {
+                            currentSettings.fcm_token = token.value;
+                            await supabase.from('profiles').update({ settings: currentSettings }).eq('id', state.currentUser.id);
+                        }
+                    });
+
+                    pn.addListener('registrationError', (error: any) => {
+                        console.warn('Error on push registration: ' + JSON.stringify(error));
+                    });
+
+                    pn.addListener('pushNotificationReceived', (notification: any) => {
+                        console.log('Push received: ', notification);
+                        // Forward to local notifications if app is in foreground
+                        ln.schedule({
+                            notifications: [{
+                                title: notification.title || 'Новое уведомление',
+                                body: notification.body || '',
+                                id: new Date().getTime(),
+                                schedule: { at: new Date(Date.now() + 1000) },
+                                sound: 'skype_call.mp3',
+                                actionTypeId: '',
+                                extra: notification.data
+                            }]
+                        });
+                    });
+
+                    pn.addListener('pushNotificationActionPerformed', (notification: any) => {
+                        console.log('Push action performed: ', notification);
+                    });
+                } catch(e) { console.warn('Push initialization error:', e); }
                 try { cam.requestPermissions(); } catch(e) {}
                 try { geo.requestPermissions(); } catch(e) {}
             } else if ("Notification" in window) {
                 if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                    Notification.requestPermission();
+                    Notification.requestPermission().then(() => {
+                        requestFirebaseWebPushPermission();
+                    });
+                } else if (Notification.permission === "granted") {
+                    requestFirebaseWebPushPermission();
                 }
+                listenForFirebaseMessages();
             }
 
             loadChats();

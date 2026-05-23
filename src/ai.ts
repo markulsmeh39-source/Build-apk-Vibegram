@@ -3,6 +3,7 @@ import { state } from './supabase';
 import { renderMediaModal } from './messages-media';
 import { executeAiWithFallback, executeHfWithFallback } from './ai-keys';
 import { customAlert } from './utils';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 export async function generateAiImage() {
     const input = document.getElementById('message-input') as HTMLTextAreaElement;
@@ -47,11 +48,26 @@ export async function generateAiImage() {
 
     try {
         const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
-        const response = await fetch(pollUrl, { signal: abortController.signal });
-        if (!response.ok) {
-            throw new Error(`Ошибка генерации: ${response.status}`);
+        
+        let imageBlob: Blob;
+        
+        if (Capacitor.isNativePlatform()) {
+            const options = {
+                url: pollUrl,
+                responseType: 'blob' as const
+            };
+            const response = await CapacitorHttp.get(options);
+            // Capacitor returns 'blob' response type as a base64 string
+            const base64str = response.data;
+            const fetchResp = await fetch(`data:image/jpeg;base64,${base64str}`);
+            imageBlob = await fetchResp.blob();
+        } else {
+            const response = await fetch(pollUrl, { signal: abortController.signal });
+            if (!response.ok) {
+                throw new Error(`Ошибка генерации: ${response.status}`);
+            }
+            imageBlob = await response.blob();
         }
-        const imageBlob = await response.blob();
         
         if (!imageBlob) throw new Error("Изображение не удалось сгенерировать.");
 
