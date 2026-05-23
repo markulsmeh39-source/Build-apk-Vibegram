@@ -49,7 +49,7 @@ jobs:
       run: chmod +x android/gradlew
 
     - name: Build Debug APK
-      run: cd android && ./gradlew assembleDebug --no-daemon
+      run: cd android && gradle assembleDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
