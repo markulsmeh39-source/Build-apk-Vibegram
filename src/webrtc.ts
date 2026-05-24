@@ -326,16 +326,27 @@ async function startCall(isVideo: boolean) {
         const offer = await rtcPeerConnection.createOffer();
         await rtcPeerConnection.setLocalDescription(offer);
         
+        const callerName = state.currentProfile.display_name || state.currentProfile.username;
         callChannel.send({
             type: 'broadcast', event: 'call-offer',
             payload: { 
                 targetUserId: state.activeChatOtherUser.id, 
                 callerId: state.currentUser.id,
-                callerName: state.currentProfile.display_name || state.currentProfile.username,
+                callerName: callerName,
                 callerAvatar: state.currentProfile.avatar_url,
                 offer,
                 isVideo
             }
+        });
+        
+        // Trigger remote push for call
+        import('./utils').then(m => {
+            m.triggerRemotePushNotification(
+                [state.activeChatOtherUser.id], 
+                'Входящий звонок', 
+                `Звонит ${callerName}`, 
+                { type: 'call_offer', callerName }
+            );
         });
         
     } catch (err) {

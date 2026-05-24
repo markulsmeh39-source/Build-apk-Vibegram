@@ -1062,6 +1062,20 @@ async function actuallySend(text: string, files: File[], input: HTMLTextAreaElem
             import('./chat').then(c => c.loadChats());
             // Broadcast to other users
             import('./supabase').then(s => s.broadcastUpdate(state.activeChatId!, 'message'));
+            
+            // Trigger remote push
+            import('./utils').then(async (m) => {
+                let userIds: string[] = [];
+                if (state.activeChatOtherUser) {
+                    userIds.push(state.activeChatOtherUser.id);
+                } else {
+                    const { data: members } = await supabase.from('chat_participants').select('user_id').eq('chat_id', state.activeChatId).neq('user_id', state.currentUser.id);
+                    if (members) userIds = members.map(p => p.user_id);
+                }
+                const senderName = state.currentProfile?.display_name || state.currentProfile?.username || 'Пользователь';
+                const msgText = insertedMsg?.content || (insertedMsg?.message_type === 'voice' ? '🎤 Голосовое сообщение' : 'Медиа сообщение');
+                m.triggerRemotePushNotification(userIds, senderName, msgText);
+            });
         }
 
     } catch (err: any) {

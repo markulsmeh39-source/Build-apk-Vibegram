@@ -3,6 +3,14 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { v2 as cloudinary } from "cloudinary";
+import admin from "firebase-admin";
+
+// Initialize Firebase Admin (Uses Application Default Credentials in Cloud Run)
+try {
+  admin.initializeApp();
+} catch (e) {
+  console.log("Firebase Admin already initialized or missing env.");
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +58,38 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // API Route for FCM Push Notifications
+  app.post("/api/send-push", async (req, res) => {
+    try {
+      const { tokens, title, body, data } = req.body;
+      if (!tokens || tokens.length === 0) {
+        return res.status(400).json({ error: "Missing tokens" });
+      }
+      
+      const payload: admin.messaging.MulticastMessage = {
+        tokens,
+        notification: {
+          title: title || "Уведомление",
+          body: body || "",
+        },
+        data: data || {},
+        android: {
+           priority: "high",
+           notification: {
+               sound: "default",
+               channelId: "default"
+           }
+        }
+      };
+
+      const response = await admin.messaging().sendEachForMulticast(payload);
+      res.json({ success: true, response });
+    } catch (e: any) {
+      console.error("Push Error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // API Route for soft-delete
   app.post("/api/cloudinary/soft-delete", async (req, res) => {

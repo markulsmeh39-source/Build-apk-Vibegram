@@ -1,5 +1,27 @@
 import { state, supabase } from './supabase';
 
+export async function triggerRemotePushNotification(userIds: string[], title: string, body: string, data?: any) {
+    if (!userIds || userIds.length === 0) return;
+    try {
+        const { data: profiles } = await supabase.from('profiles').select('settings').in('id', userIds);
+        if (!profiles) return;
+        let tokens: string[] = [];
+        profiles.forEach(p => {
+            if (p.settings?.fcm_token) tokens.push(p.settings.fcm_token);
+            if (p.settings?.fcm_web_token) tokens.push(p.settings.fcm_web_token);
+        });
+        if (tokens.length === 0) return;
+        
+        await fetch('/api/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tokens, title, body, data })
+        });
+    } catch(e) {
+        console.warn("Failed to trigger remote push", e);
+    }
+}
+
 export const getFakeEmail = (nick: string) => `${nick.toLowerCase().trim().replace(/[^a-z0-9]/g, '')}@vibegram.local`;
 
 export const formatBytes = (bytes: number) => {
